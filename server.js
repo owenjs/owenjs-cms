@@ -1,43 +1,64 @@
-var fs = require('fs');
+"use strict";
 
-var formidable = require('express-formidable');
+var path = require('path');
+var fs = require('fs');
+var express = require('express');
+
+var formidable = require('./lib/formidable-middleware');
 var exphbs  = require('express-handlebars');
 
-var app = require('express')();
+var app = express();
 
-app.engine('handlebars', exphbs());
-app.set('view engine', 'handlebars');
-
-app.get('/', function (req, res) {
-  res.render('home');
+// Create `ExpressHandlebars` instance with a default layout.
+var hbs = exphbs.create({
+  partialsDir: "views/partials"
 });
 
+// Register `hbs` as our view engine using its bound `engine()` function.
+app.engine("handlebars", hbs.engine);
+app.set("view engine", "handlebars");
 
-//app.use(express.static("public"));
+app.use(express.static("public"));
 app.use(formidable());
 
-app.post('/create-post', function(req, res) {
-  // Get Current Posts
-  var currentPosts = {};
+app.get('/', function (req, res) {
+  // Get Current Blog Posts
   fs.readFile(__dirname + '/data/posts.json', function (error, file) {
-    currentPosts = JSON.parse(file);
-
-    // Add new Post to Current Posts
-    currentPosts[Date.now()] = req.fields.blogpost;
-
-    // Write back to Posts.json
-    fs.writeFile(__dirname + '/data/posts.json', JSON.stringify(currentPosts), function (error) { 
-      if(error) {
-        console.log(error);
-      } else {
-        res.redirect('/');
-      }
+    // Render Home with Current Blog Posts
+    res.render('home', {
+      blogPost: JSON.parse(file)
     });
   });
 });
 
-app.get('/get-posts', function(req, res) {
-  res.sendFile(__dirname + '/data/posts.json');
+app.get('/create-post', function(req, res) {
+  res.render('create-post');
+})
+
+app.post('/', function(req, res) {
+  if(req.fields.action == "create-post") {
+    // Get Current Posts
+    fs.readFile(__dirname + '/data/posts.json', function (error, file) {
+      var currentPosts = JSON.parse(file);
+
+      // Add new Post to Current Posts
+      currentPosts.push({
+        title: req.fields.title,
+        main: req.fields.main,
+      });
+
+      // Write back to Posts.json
+      fs.writeFile(__dirname + '/data/posts.json', JSON.stringify(currentPosts), function (error) { 
+        if(error) {
+          console.log(error);
+        } else {
+          res.render('home', {
+            blogPost: currentPosts
+          });
+        }
+      });
+    });
+  }
 });
 
 app.listen(3000, function () {
