@@ -18,7 +18,10 @@ var hbs = exphbs.create({
 app.engine("handlebars", hbs.engine);
 app.set("view engine", "handlebars");
 
+// Static Site 
 app.use(express.static("public"));
+// Admin Site
+app.use('/admin', express.static('./admin/build'));
 app.use(formidable());
 
 app.get('/', function (req, res) {
