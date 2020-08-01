@@ -21,7 +21,7 @@ app.set("view engine", "handlebars");
 // Static Site 
 app.use(express.static("public"));
 // Admin Site
-app.use('/admin', express.static('./admin/build'));
+app.use('/admin', express.static(path.join(__dirname, 'admin', 'build')));
 app.use(formidable());
 
 app.get('/', function (req, res) {
@@ -64,6 +64,11 @@ app.post('/', function(req, res) {
   }
 });
 
-app.listen(3000, function () {
+// Admin Site
+app.get('/admin/*', function (req, res) {
+  res.sendFile(path.join(__dirname, 'admin', 'build', 'index.html'));
+});
+
+app.listen(9000, function () {
   console.log('Server is listening on port 3000. Ready to accept requests!');
 });
