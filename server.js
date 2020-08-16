@@ -1,10 +1,12 @@
 "use strict";
+require('dotenv').config();
 
 var path = require('path');
 var fs = require('fs');
 var express = require('express');
 
 var formidable = require('./lib/formidable-middleware');
+var db = require('./database');
 var exphbs  = require('express-handlebars');
 
 var app = express();
@@ -26,12 +28,12 @@ app.use(formidable());
 
 app.get('/', function (req, res) {
   // Get Current Blog Posts
-  fs.readFile(__dirname + '/data/posts.json', function (error, file) {
+  db.getAll('blog_posts', 'posts').then((blogPosts) => {
     // Render Home with Current Blog Posts
     res.render('home', {
-      blogPost: JSON.parse(file)
+      blogPost: blogPosts
     });
-  });
+  }).catch(() => {res.render('error', {layout: 'error', errorCode: '500'})});
 });
 
 app.get('/create-post', function(req, res) {
@@ -40,27 +42,18 @@ app.get('/create-post', function(req, res) {
 
 app.post('/', function(req, res) {
   if(req.fields.action == "create-post") {
-    // Get Current Posts
-    fs.readFile(__dirname + '/data/posts.json', function (error, file) {
-      var currentPosts = JSON.parse(file);
-
-      // Add new Post to Current Posts
-      currentPosts.push({
-        title: req.fields.title,
-        main: req.fields.main,
+    // Insert new Post in Database
+    db.insert('blog_posts', 'posts', {
+      title: req.fields.title,
+      main: req.fields.main
+    }, true).then(() => {
+      // Render all Posts on Home Page
+      db.getAll('blog_posts', 'posts').then((blogPosts) => {
+        res.render('home', {
+          blogPost: blogPosts
+        });
       });
-
-      // Write back to Posts.json
-      fs.writeFile(__dirname + '/data/posts.json', JSON.stringify(currentPosts), function (error) { 
-        if(error) {
-          console.log(error);
-        } else {
-          res.render('home', {
-            blogPost: currentPosts
-          });
-        }
-      });
-    });
+    }).catch(() => {res.render('error', {layout: 'error', errorCode: '500'})});
   }
 });
 
@@ -70,5 +63,5 @@ app.get('/admin/*', function (req, res) {
 });
 
 app.listen(9000, function () {
-  console.log('Server is listening on port 3000. Ready to accept requests!');
+  console.log('Server is listening on port 9000. Ready to accept requests!');
 });
